@@ -7,23 +7,28 @@ import (
 	"github.com/labstack/echo"
 )
 
-// ID はセッションを一意に識別するID
+var (
+	ErrorBadParameter   = errors.New("Bad Parameter")
+	ErrorNotFound       = errors.New("Not Found")
+	ErrorInvalidToken   = errors.New("Invalid Token")
+	ErrorInvalidCommand = errors.New("Invalid Command")
+	ErrorNotImplemented = errors.New("Not Implemented")
+	ErrorOther          = errors.New("Other")
+)
+
 type ID string
 
-// Store はセッションデータと整合性トークンを保持する構造体
 type Store struct {
 	Data             map[string]string
 	ConsistencyToken string
 }
 
-// Manager は Sessionの操作・管理
 type Manager struct {
 	stopCh    chan struct{}
 	commandCh chan command
 	stopGCCh  chan struct{}
 }
 
-// Start は Managerの開始
 func (m *Manager) Start(echo *echo.Echo) {
 	e = echo
 	go m.mainLoop()
@@ -31,14 +36,12 @@ func (m *Manager) Start(echo *echo.Echo) {
 	go m.gcLoop()
 }
 
-// Stop は Managerの停止
 func (m *Manager) Stop() {
 	m.stopGCCh <- struct{}{}
 	time.Sleep(100 * time.Millisecond)
 	m.stopCh <- struct{}{}
 }
 
-// Create は セッションの作成
 func (m *Manager) Create() (ID, error) {
 	respCh := make(chan response, 1)
 	defer close(respCh)
@@ -57,7 +60,6 @@ func (m *Manager) Create() (ID, error) {
 	return res, ErrorOther
 }
 
-// LoadStore は データストアの読み出し
 func (m *Manager) LoadStore(sessionID ID) (Store, error) {
 	respCh := make(chan response, 1)
 	defer close(respCh)
@@ -77,7 +79,6 @@ func (m *Manager) LoadStore(sessionID ID) (Store, error) {
 	return res, ErrorOther
 }
 
-// SaveStore は データストアの保存
 func (m *Manager) SaveStore(sessionID ID, sessionStore Store) error {
 	respCh := make(chan response, 1)
 	defer close(respCh)
@@ -92,7 +93,6 @@ func (m *Manager) SaveStore(sessionID ID, sessionStore Store) error {
 	return nil
 }
 
-// Delete は セッションの削除
 func (m *Manager) Delete(sessionID ID) error {
 	respCh := make(chan response, 1)
 	defer close(respCh)
@@ -107,7 +107,6 @@ func (m *Manager) Delete(sessionID ID) error {
 	return nil
 }
 
-// DeleteExpired は 期限切れセッションの削除
 func (m *Manager) DeleteExpired() error {
 	respCh := make(chan response, 1)
 	defer close(respCh)
@@ -120,13 +119,3 @@ func (m *Manager) DeleteExpired() error {
 	}
 	return nil
 }
-
-// Managerが返す各エラーのインスタンスを生成
-var (
-	ErrorBadParameter   = errors.New("Bad Parameter")
-	ErrorNotFound       = errors.New("Not Found")
-	ErrorInvalidToken   = errors.New("Invalid Token")
-	ErrorInvalidCommand = errors.New("Invalid Command")
-	ErrorNotImplemented = errors.New("Not Implemented")
-	ErrorOther          = errors.New("Other")
-)

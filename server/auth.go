@@ -4,30 +4,27 @@ import (
 	"errors"
 	"net/http"
 
-	"login-checker/server/model"
-	"login-checker/server/session"
-
+	"github.com/knanao/goauth/server/model"
+	"github.com/knanao/goauth/server/session"
 	"github.com/labstack/echo"
 )
 
-// auth.goが返すエラーの定義
 var (
 	ErrorInvalidUserID   = errors.New("Invalid UserID")
 	ErrorInvalidPassword = errors.New("Invalid Password")
 	ErrorNotLoggedIn     = errors.New("Not Logged In")
 )
 
-// UserLogin はユーザーログイン時の処理
 func UserLogin(c echo.Context, userID string, password string) error {
-	// users, err := userDA.FindByUserID(userID, model.FindFirst)
-	// if err != nil {
-	// 	return err
-	// }
-	// user := &users[0]
-	// encodePassword := model.EncodeStringMD5(password)
-	// // if user.Password != encodePassword {
-	// // 	return ErrorInvalidPassword
-	// // }
+	users, err := userDA.FindByUserID(userID, model.FindFirst)
+	if err != nil {
+		return err
+	}
+	user := &users[0]
+	encodePassword := model.EncodeStringMD5(password)
+	if user.Password != encodePassword {
+		return ErrorInvalidPassword
+	}
 	sessionID, err := sessionManager.Create()
 	if err != nil {
 		return err
@@ -52,7 +49,6 @@ func UserLogin(c echo.Context, userID string, password string) error {
 	return nil
 }
 
-// UserLogout はユーザーログアウト時の処理
 func UserLogout(c echo.Context) error {
 	sessionID, err := session.ReadCookie(c)
 	if err != nil {
@@ -66,7 +62,6 @@ func UserLogout(c echo.Context) error {
 	return nil
 }
 
-// CheckUserID は指定されたユーザーIDでログインしているか確認
 func CheckUserID(c echo.Context, userID string) error {
 	sessionID, err := session.ReadCookie(c)
 	if err != nil {
@@ -87,7 +82,6 @@ func CheckUserID(c echo.Context, userID string) error {
 	return nil
 }
 
-// CheckRole は指定された権限を持ったユーザーでログインしているか確認
 func CheckRole(c echo.Context, role model.Role) (bool, error) {
 	sessionID, err := session.ReadCookie(c)
 	if err != nil {
@@ -105,7 +99,6 @@ func CheckRole(c echo.Context, role model.Role) (bool, error) {
 	return haveRole, nil
 }
 
-// CheckRoleByUserID はユーザーが指定された権限を持っているか確認
 func CheckRoleByUserID(userID string, role model.Role) (bool, error) {
 	users, err := userDA.FindByUserID(userID, model.FindFirst)
 	if err != nil {
@@ -121,8 +114,6 @@ func CheckRoleByUserID(userID string, role model.Role) (bool, error) {
 	return false, nil
 }
 
-// MiddlewareAuthAdmin は管理者権限を持ったユーザーのみが参照できる
-// ページに適用するMiddlewareです。
 func MiddlewareAuthAdmin(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		isAdmin, err := CheckRole(c, model.RoleAdmin)
@@ -131,7 +122,7 @@ func MiddlewareAuthAdmin(next echo.HandlerFunc) echo.HandlerFunc {
 			isAdmin = false
 		}
 		if !isAdmin {
-			msg := "管理者でログインしていません。"
+			msg := "You have not logged in as an admin."
 			return c.Render(http.StatusOK, "error", msg)
 		}
 		return next(c)
